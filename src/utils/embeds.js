@@ -85,13 +85,31 @@ function queueEmbed(queue, page = 1, pageSize = 10) {
 }
 
 function playerButtons(disabled = false) {
-  return new ActionRowBuilder().addComponents(
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('music_previous').setLabel('Prev').setStyle(ButtonStyle.Secondary).setEmoji('⏮️').setDisabled(disabled),
     new ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(ButtonStyle.Secondary).setEmoji('⏸️').setDisabled(disabled),
     new ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(ButtonStyle.Success).setEmoji('▶️').setDisabled(disabled),
-    new ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(ButtonStyle.Primary).setEmoji('⏭️').setDisabled(disabled),
-    new ButtonBuilder().setCustomId('music_loop').setLabel('Loop').setStyle(ButtonStyle.Secondary).setEmoji('🔁').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_skip').setLabel('Next').setStyle(ButtonStyle.Primary).setEmoji('⏭️').setDisabled(disabled),
     new ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(ButtonStyle.Danger).setEmoji('⏹️').setDisabled(disabled)
   );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('music_loop').setLabel('Loop').setStyle(ButtonStyle.Secondary).setEmoji('🔁').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_shuffle').setLabel('Shuffle').setStyle(ButtonStyle.Secondary).setEmoji('🔀').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_vol_down').setLabel('Vol -').setStyle(ButtonStyle.Secondary).setEmoji('🔉').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_vol_up').setLabel('Vol +').setStyle(ButtonStyle.Secondary).setEmoji('🔊').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_queue').setLabel('Queue').setStyle(ButtonStyle.Primary).setEmoji('📃').setDisabled(disabled)
+  );
+
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('music_autoplay').setLabel('Autoplay').setStyle(ButtonStyle.Secondary).setEmoji('🎶').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_replay').setLabel('Replay').setStyle(ButtonStyle.Secondary).setEmoji('🔄').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_clear').setLabel('Clear').setStyle(ButtonStyle.Secondary).setEmoji('🗑️').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_lyrics').setLabel('Lyrics').setStyle(ButtonStyle.Secondary).setEmoji('🎤').setDisabled(disabled),
+    new ButtonBuilder().setCustomId('music_disconnect').setLabel('Leave').setStyle(ButtonStyle.Danger).setEmoji('🚪').setDisabled(disabled)
+  );
+
+  return [row1, row2, row3];
 }
 
 module.exports = {

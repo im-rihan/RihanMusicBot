@@ -220,7 +220,7 @@ class MusicPlayer {
     const embed = trackEmbed(track, { title: 'Now Playing' });
     const message = await channel.send({
       embeds: [embed],
-      components: [playerButtons()],
+      components: playerButtons(),
     }).catch(() => null);
 
     if (message) queueSafeSetNowPlaying(this.get(guildId), message);
@@ -250,6 +250,32 @@ class MusicPlayer {
     const skipped = queue.current;
     queue.player.stop(true);
     return skipped;
+  }
+
+  async previous(guildId) {
+    const queue = this.get(guildId);
+    if (!queue?.player) return null;
+    const prev = queue.history[0];
+    if (!prev) return null;
+
+    queue.history.shift();
+    if (queue.current) {
+      queue.tracks.unshift(queue.current);
+    }
+    queue.tracks.unshift(prev);
+    queue.current = null;
+    queue.player.stop(true);
+    return prev;
+  }
+
+  async replay(guildId) {
+    const queue = this.get(guildId);
+    if (!queue?.player || !queue.current) return null;
+    const track = queue.current;
+    queue.tracks.unshift({ ...track });
+    queue.current = null;
+    queue.player.stop(true);
+    return track;
   }
 
   stop(guildId) {

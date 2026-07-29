@@ -27,7 +27,7 @@ module.exports = {
         const embed = trackEmbed(result.track, {
           title: result.added > 1 ? `Now Playing (+${result.added - 1} more)` : 'Now Playing',
         });
-        return interaction.editReply({ embeds: [embed], components: [playerButtons()] });
+        return interaction.editReply({ embeds: [embed], components: playerButtons() });
       }
 
       if (result.added > 1) {

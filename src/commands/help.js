@@ -17,7 +17,8 @@ module.exports = {
         '`/247` `/dj` `/lock` `/unlock` `/setup` `/restart`',
         '',
         'Supports **YouTube**, **Spotify** links, and **SoundCloud**.',
-        'Use the buttons under Now Playing for quick controls.',
+        'Use the Now Playing buttons: Prev / Pause / Resume / Next / Stop,',
+        'Loop / Shuffle / Vol± / Queue / Autoplay / Replay / Clear / Lyrics / Leave.',
       ].join('\n')
     );
 

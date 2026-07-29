@@ -15,6 +15,6 @@ module.exports = {
       footer: `Volume: ${queue.volume}% • Loop: ${queue.loopMode}${queue.filters.bassboost ? ' • Bass Boost' : ''}`,
     });
 
-    return interaction.reply({ embeds: [embed], components: [playerButtons()] });
+    return interaction.reply({ embeds: [embed], components: playerButtons() });
   },
 };
