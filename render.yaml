@@ -1,0 +1,23 @@
+# Example Render Blueprint — use a paid/"always on" instance.
+# Free web services sleep when idle and will break Discord voice bots.
+services:
+  - type: worker
+    name: rihan-music-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: EMBED_COLOR
+        value: "5865F2"
+      - key: DEFAULT_VOLUME
+        value: "50"
+      - key: NODE_ENV
+        value: production

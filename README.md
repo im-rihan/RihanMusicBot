@@ -82,7 +82,32 @@ npm start
 | `/setup` `/restart` | Config & owner restart |
 | `/help` | Command list |
 
-## Docker
+## Hosting (keep the bot online without your PC)
+
+**Do not use GitHub Actions** for this bot. Actions runners stop after each job, so the bot would go offline within minutes. Discord music bots need a process that stays running 24/7.
+
+### Recommended: Railway (easiest with GitHub)
+
+1. Go to [railway.app](https://railway.app) and sign in with GitHub
+2. **New Project** → **Deploy from GitHub repo** → select `im-rihan/RihanMusicBot`
+3. Add variables (same as `.env`):
+   - `DISCORD_TOKEN`
+   - `CLIENT_ID`
+   - `OWNER_ID`
+   - `GUILD_ID` (optional)
+4. Deploy — Railway builds the Dockerfile and keeps the bot online
+5. **Stop the bot on your PC** so only one instance runs
+
+### Other options
+
+| Host | Notes |
+|------|--------|
+| [Railway](https://railway.app) | Best simple option; GitHub deploy |
+| [Render](https://render.com) | Use a **Worker** that stays on (free web tier sleeps) |
+| [Fly.io](https://fly.io) | Good Docker hosting |
+| VPS (Oracle free / Contabo / DigitalOcean) | Full control; run `docker compose up -d` |
+
+### Docker (VPS)
 
 ```bash
 cp .env.example .env
@@ -90,7 +115,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Slash commands still need a one-time deploy from a machine with Node:
+Slash commands still need a one-time deploy from any machine with Node:
 
 ```bash
 npm install
@@ -121,8 +146,9 @@ RihanMusicBot/
 
 - Storage uses a local JSON file (`data/bot.json`) for guild settings and play history — no native DB build required.
 - Spotify links are resolved by searching the matching track on YouTube (Discord bots cannot stream Spotify audio directly).
-- YouTube availability can change; if streams fail, update `play-dl` or consider a yt-dlp-based extractor later.
+- YouTube streams via **yt-dlp** (bundled). Keep dependencies updated if playback breaks.
 - Keep your bot token secret. Never commit `.env`.
+- Run **only one** bot instance (PC or cloud), not both.
 
 ## License
 
