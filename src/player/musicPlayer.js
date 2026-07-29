@@ -217,7 +217,7 @@ class MusicPlayer {
     const channel = await this.getTextChannel(guildId);
     if (!channel) return;
 
-    const embed = trackEmbed(track, { title: 'Now Playing' });
+    const embed = trackEmbed(track, { title: 'Now Playing', client: this.client });
     const message = await channel.send({
       embeds: [embed],
       components: playerButtons(),

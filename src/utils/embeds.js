@@ -1,23 +1,31 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../config');
 
-function baseEmbed(title, description) {
+function applyBotBrand(embed, client) {
+  if (!client?.user) return embed;
+  return embed.setAuthor({
+    name: client.user.displayName || client.user.username,
+    iconURL: client.user.displayAvatarURL({ size: 256 }),
+  });
+}
+
+function baseEmbed(title, description, client = null) {
   const embed = new EmbedBuilder().setColor(config.embedColor).setTimestamp();
   if (title) embed.setTitle(title);
   if (description) embed.setDescription(description);
-  return embed;
+  return applyBotBrand(embed, client);
 }
 
-function successEmbed(description) {
-  return baseEmbed(null, description).setColor(0x57f287);
+function successEmbed(description, client = null) {
+  return baseEmbed(null, description, client).setColor(0x57f287);
 }
 
-function errorEmbed(description) {
-  return baseEmbed('Error', description).setColor(0xed4245);
+function errorEmbed(description, client = null) {
+  return baseEmbed('Error', description, client).setColor(0xed4245);
 }
 
-function infoEmbed(title, description) {
-  return baseEmbed(title, description);
+function infoEmbed(title, description, client = null) {
+  return baseEmbed(title, description, client);
 }
 
 function formatDuration(ms) {
@@ -39,7 +47,7 @@ function progressBar(current, total, size = config.progressBarLength) {
 }
 
 function trackEmbed(track, options = {}) {
-  const embed = baseEmbed(options.title || 'Now Playing')
+  const embed = baseEmbed(options.title || 'Now Playing', null, options.client)
     .setDescription(`[${track.title}](${track.url})`)
     .addFields(
       { name: 'Duration', value: formatDuration(track.duration), inline: true },
@@ -48,7 +56,14 @@ function trackEmbed(track, options = {}) {
     );
 
   if (track.thumbnail) embed.setThumbnail(track.thumbnail);
-  if (options.footer) embed.setFooter({ text: options.footer });
+  if (options.client?.user) {
+    embed.setFooter({
+      text: options.footer || 'Rihan Music',
+      iconURL: options.client.user.displayAvatarURL({ size: 128 }),
+    });
+  } else if (options.footer) {
+    embed.setFooter({ text: options.footer });
+  }
   if (typeof options.position === 'number' && track.duration) {
     embed.addFields({
       name: 'Progress',
@@ -58,7 +73,7 @@ function trackEmbed(track, options = {}) {
   return embed;
 }
 
-function queueEmbed(queue, page = 1, pageSize = 10) {
+function queueEmbed(queue, page = 1, pageSize = 10, client = null) {
   const tracks = queue.tracks;
   const totalPages = Math.max(1, Math.ceil(tracks.length / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -79,9 +94,12 @@ function queueEmbed(queue, page = 1, pageSize = 10) {
       .join('\n');
   }
 
-  return baseEmbed('Music Queue', description).setFooter({
+  const embed = baseEmbed('Music Queue', description, client);
+  const footer = {
     text: `Page ${safePage}/${totalPages} • ${tracks.length} song(s) • Volume: ${queue.volume}% • Loop: ${queue.loopMode}`,
-  });
+  };
+  if (client?.user) footer.iconURL = client.user.displayAvatarURL({ size: 128 });
+  return embed.setFooter(footer);
 }
 
 function playerButtons(disabled = false) {

@@ -10,22 +10,23 @@ module.exports = {
       opt.setName('query').setDescription('Song name or URL').setRequired(true)
     ),
   async execute(interaction) {
-    // Acknowledge immediately so Discord doesn't time out the interaction
     await interaction.deferReply();
 
+    const client = interaction.client;
     const check = checkVoiceRequirements(interaction, { needSameChannel: false });
     if (!check.ok) {
-      return interaction.editReply({ embeds: [errorEmbed(check.message)] });
+      return interaction.editReply({ embeds: [errorEmbed(check.message, client)] });
     }
 
     const query = interaction.options.getString('query', true);
 
     try {
-      const result = await interaction.client.music.play(interaction, query);
+      const result = await client.music.play(interaction, query);
 
       if (result.type === 'now') {
         const embed = trackEmbed(result.track, {
           title: result.added > 1 ? `Now Playing (+${result.added - 1} more)` : 'Now Playing',
+          client,
         });
         return interaction.editReply({ embeds: [embed], components: playerButtons() });
       }
@@ -34,7 +35,8 @@ module.exports = {
         return interaction.editReply({
           embeds: [
             successEmbed(
-              `Added **${result.added}** tracks to the queue.\nFirst: [${result.track.title}](${result.track.url})`
+              `Added **${result.added}** tracks to the queue.\nFirst: [${result.track.title}](${result.track.url})`,
+              client
             ),
           ],
         });
@@ -43,12 +45,13 @@ module.exports = {
       return interaction.editReply({
         embeds: [
           successEmbed(
-            `Queued [${result.track.title}](${result.track.url}) — \`${formatDuration(result.track.duration)}\` at position **#${result.position}**`
+            `Queued [${result.track.title}](${result.track.url}) — \`${formatDuration(result.track.duration)}\` at position **#${result.position}**`,
+            client
           ),
         ],
       });
     } catch (err) {
-      return interaction.editReply({ embeds: [errorEmbed(err.message || 'Failed to play.')] });
+      return interaction.editReply({ embeds: [errorEmbed(err.message || 'Failed to play.', client)] });
     }
   },
 };

@@ -13,6 +13,7 @@ module.exports = {
       title: 'Now Playing',
       position: queue.getPositionMs(),
       footer: `Volume: ${queue.volume}% • Loop: ${queue.loopMode}${queue.filters.bassboost ? ' • Bass Boost' : ''}`,
+      client: interaction.client,
     });
 
     return interaction.reply({ embeds: [embed], components: playerButtons() });

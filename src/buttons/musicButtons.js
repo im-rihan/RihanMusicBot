@@ -90,7 +90,7 @@ async function handleButton(interaction, client) {
       if (!q || q.isEmpty) {
         return interaction.reply({ embeds: [errorEmbed('The queue is empty.')], ...EPHEMERAL });
       }
-      return interaction.reply({ embeds: [queueEmbed(q, 1)], ...EPHEMERAL });
+      return interaction.reply({ embeds: [queueEmbed(q, 1, 10, client)], ...EPHEMERAL });
     }
     case 'music_autoplay': {
       const q = client.music.ensure(interaction.guildId);
