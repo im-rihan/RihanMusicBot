@@ -10,12 +10,14 @@ module.exports = {
       opt.setName('query').setDescription('Song name or URL').setRequired(true)
     ),
   async execute(interaction) {
+    // Acknowledge immediately so Discord doesn't time out the interaction
+    await interaction.deferReply();
+
     const check = checkVoiceRequirements(interaction, { needSameChannel: false });
     if (!check.ok) {
-      return interaction.reply({ embeds: [errorEmbed(check.message)], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed(check.message)] });
     }
 
-    await interaction.deferReply();
     const query = interaction.options.getString('query', true);
 
     try {

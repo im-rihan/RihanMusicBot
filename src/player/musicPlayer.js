@@ -6,17 +6,16 @@ const {
   VoiceConnectionStatus,
   entersState,
   getVoiceConnection,
-  StreamType,
+  NoSubscriberBehavior,
 } = require('@discordjs/voice');
-const play = require('play-dl');
 const { GuildQueue } = require('./queueManager');
-const { getFilterArgs } = require('./filters');
 const { resolveQuery, searchRelated } = require('./trackResolver');
 const { trackEmbed, playerButtons, errorEmbed } = require('../utils/embeds');
 const { getGuildSettings, updateGuildSettings, addToHistory } = require('../database');
 const config = require('../config');
 const { createLogger } = require('../utils/logger');
-
+const { createTrackStream } = require('./streamProvider');
+const { getFilterArgs } = require('./filters');
 const logger = createLogger('player');
 
 class MusicPlayer {
@@ -55,7 +54,11 @@ class MusicPlayer {
       selfDeaf: true,
     });
 
-    const player = createAudioPlayer();
+    const player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Play,
+      },
+    });
     connection.subscribe(player);
 
     queue.connection = connection;
@@ -86,11 +89,24 @@ class MusicPlayer {
       }
     });
 
+    connection.on('stateChange', (oldState, newState) => {
+      logger.info(`Voice ${interaction.guildId}: ${oldState.status} → ${newState.status}`);
+    });
+
+    connection.on('error', (err) => {
+      logger.error(`Voice connection error in ${interaction.guildId}:`, err.message);
+    });
+
     try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
     } catch (err) {
+      const status = connection.state?.status;
+      const reason = err?.message || String(err);
+      logger.error(`Voice join timed out (status=${status}):`, reason);
       this.destroy(interaction.guildId);
-      throw new Error('Failed to join the voice channel in time.');
+      throw new Error(
+        'Failed to join the voice channel. Make sure I have Connect + Speak permissions, then try again.'
+      );
     }
 
     return queue;
@@ -154,10 +170,12 @@ class MusicPlayer {
     try {
       await this.playTrack(guildId, track);
     } catch (err) {
-      logger.error(`Failed to play track ${track.title}:`, err.message);
+      logger.error(`Failed to play track ${track.title}:`, err);
       const channel = await this.getTextChannel(guildId);
       if (channel) {
-        await channel.send({ embeds: [errorEmbed(`Could not play **${track.title}**. Skipping…`)] }).catch(() => {});
+        await channel.send({
+          embeds: [errorEmbed(`Could not play **${track.title}**.\n\`${err.message || err}\``)],
+        }).catch(() => {});
       }
       await this.processQueue(guildId);
     }
@@ -167,44 +185,27 @@ class MusicPlayer {
     const queue = this.get(guildId);
     if (!queue?.player) throw new Error('No active player.');
 
-    const stream = track.source === 'SoundCloud'
-      ? await play.stream(track.url, { quality: 2 })
-      : await play.stream(track.url);
-
-    const filterArgs = getFilterArgs(queue);
-    let input = stream.stream;
-    let inputType = stream.type || StreamType.Arbitrary;
-
-    if (filterArgs.length) {
-      const { spawn } = require('child_process');
-      const ffmpegPath = require('ffmpeg-static');
-      const ffmpeg = spawn(ffmpegPath, [
-        '-analyzeduration', '0',
-        '-loglevel', '0',
-        '-i', 'pipe:0',
-        ...filterArgs,
-        '-f', 's16le',
-        '-ar', '48000',
-        '-ac', '2',
-        'pipe:1',
-      ], { stdio: ['pipe', 'pipe', 'ignore'] });
-
-      stream.stream.pipe(ffmpeg.stdin);
-      stream.stream.on('error', () => {
-        try { ffmpeg.kill('SIGKILL'); } catch { /* ignore */ }
-      });
-      ffmpeg.stdin.on('error', () => {});
-      input = ffmpeg.stdout;
-      inputType = StreamType.Raw;
+    if (queue.ffmpeg) {
+      try { queue.ffmpeg.kill('SIGKILL'); } catch { /* ignore */ }
+      queue.ffmpeg = null;
     }
 
-    const resource = createAudioResource(input, {
-      inputType,
-      inlineVolume: true,
+    const filterArgs = getFilterArgs(queue);
+    const filterAf = filterArgs[1] || null;
+
+    const streamed = await createTrackStream(track, {
+      volume: queue.volume,
+      filterAf,
     });
 
-    resource.volume?.setVolume(queue.volume / 100);
+    const resource = createAudioResource(streamed.stream, {
+      inputType: streamed.type,
+      inlineVolume: false,
+      silencePaddingFrames: 0,
+    });
+
     queue.resource = resource;
+    queue.ffmpeg = streamed.process || null;
     queue.startedAt = Date.now();
     queue.player.play(resource);
 
@@ -363,6 +364,10 @@ class MusicPlayer {
     if (!queue) return;
     this.clearLeaveTimeout(queue);
     try {
+      if (queue.ffmpeg) {
+        try { queue.ffmpeg.kill('SIGKILL'); } catch { /* ignore */ }
+        queue.ffmpeg = null;
+      }
       queue.player?.stop(true);
       queue.connection?.destroy();
     } catch {
@@ -400,7 +405,11 @@ class MusicPlayer {
         adapterCreator: voiceChannel.guild.voiceAdapterCreator,
         selfDeaf: true,
       });
-      const player = createAudioPlayer();
+      const player = createAudioPlayer({
+        behaviors: {
+          noSubscriber: NoSubscriberBehavior.Play,
+        },
+      });
       connection.subscribe(player);
       queue.connection = connection;
       queue.player = player;

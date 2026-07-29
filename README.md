@@ -6,7 +6,7 @@
   <img src="assets/bot-icon.png" alt="Rihan Music Bot icon" width="160" height="160" />
 </p>
 
-A production-ready Discord music bot built with **discord.js v14**, **@discordjs/voice**, and **play-dl**.
+A production-ready Discord music bot built with **discord.js v14**, **@discordjs/voice**, and **yt-dlp** streaming.
 
 ## Features
 
@@ -21,9 +21,10 @@ A production-ready Discord music bot built with **discord.js v14**, **@discordjs
 
 ## Requirements
 
-- Node.js 18+
+- Node.js **22.12+** (required by `@discordjs/voice` + DAVE)
 - A Discord bot application ([Developer Portal](https://discord.com/developers/applications))
 - FFmpeg (bundled via `ffmpeg-static`)
+- yt-dlp (bundled via `youtube-dl-exec`)
 
 ## Setup
 

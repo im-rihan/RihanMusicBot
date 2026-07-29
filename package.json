@@ -17,15 +17,22 @@
   "author": "Rihan",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
-    "@discordjs/voice": "^0.18.0",
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.19.2",
+    "@distube/ytdl-core": "^4.16.12",
+    "@snazzah/davey": "^0.1.12",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.7",
     "ffmpeg-static": "^5.2.0",
     "libsodium-wrappers": "^0.7.15",
     "opusscript": "^0.0.8",
-    "play-dl": "^1.9.7"
+    "play-dl": "^1.9.7",
+    "youtube-dl-exec": "^3.1.9"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.3"
   }
 }

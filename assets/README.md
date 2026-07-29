@@ -1,9 +1,23 @@
-# Bot Avatar
+# Bot Images
 
-Use `assets/bot-icon.png` as the Discord bot avatar.
+| File | Use | Size |
+|------|-----|------|
+| `bot-icon.png` | Bot avatar | Square |
+| `bot-banner.png` | Bot banner / cover | **680×240** (17:6) |
 
-1. Open [Discord Developer Portal](https://discord.com/developers/applications)
-2. Select your application → **Bot**
-3. Click the bot icon / **Edit** under Icon
-4. Upload `assets/bot-icon.png`
-5. Save changes
+## Upload icon (avatar)
+
+1. [Discord Developer Portal](https://discord.com/developers/applications)
+2. Your application → **Bot**
+3. Under **Icon**, upload `bot-icon.png`
+4. **Save Changes**
+
+## Upload banner (680×240)
+
+1. [Discord Developer Portal](https://discord.com/developers/applications)
+2. Your application → **General Information** (or Bot profile / Cover Image, depending on UI)
+3. Upload `assets/bot-banner.png`
+4. **Save Changes**
+
+File: `D:\Work\Personal\RihanMusicBot\assets\bot-banner.png`  
+Format: PNG · 680×240 · under 10MB
