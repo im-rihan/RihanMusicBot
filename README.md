@@ -105,10 +105,16 @@ Cloud IPs are often blocked by YouTube (`Sign in to confirm you're not a bot`). 
 1. On your PC, install a cookies export extension such as **“Get cookies.txt LOCALLY”**
 2. Open [youtube.com](https://www.youtube.com) while logged in
 3. Export cookies → save as `cookies.txt` (Netscape format)
-4. In Railway → your service → **Variables**, add either:
-   - `YOUTUBE_COOKIES` = paste the **full file contents**, or
-   - `YOUTUBE_COOKIES_BASE64` = base64 of that file (safer for special characters)
+4. In Railway → your service → **Variables**, prefer:
+   - `YOUTUBE_COOKIES_BASE64` = base64 of `cookies.txt` (keeps tabs intact), or
+   - `YOUTUBE_COOKIES` = paste the full file contents
 5. Redeploy
+
+**Windows tip — create BASE64 easily:**
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\Downloads\cookies.txt"))
+```
+Copy the output into Railway as `YOUTUBE_COOKIES_BASE64`.
 
 Cookies expire periodically — re-export if playback stops working.
 

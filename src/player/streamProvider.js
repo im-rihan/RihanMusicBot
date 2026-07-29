@@ -1,4 +1,5 @@
 const { spawn } = require('child_process');
+const fs = require('fs');
 const { StreamType } = require('@discordjs/voice');
 const ffmpegPath = require('ffmpeg-static');
 const play = require('play-dl');
@@ -7,6 +8,23 @@ const { getCookiesPath } = require('../utils/cookies');
 const { YOUTUBE_DL_PATH } = require('youtube-dl-exec/src/constants');
 
 const logger = createLogger('stream');
+
+function resolveYtdlpBin() {
+  const candidates = [
+    process.env.YTDLP_PATH,
+    '/usr/local/bin/yt-dlp',
+    YOUTUBE_DL_PATH,
+  ].filter(Boolean);
+
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {
+      // ignore
+    }
+  }
+  return YOUTUBE_DL_PATH;
+}
 
 function buildAf({ volume = 100, filterAf = null } = {}) {
   const parts = [];
@@ -23,11 +41,11 @@ function buildYtdlpArgs(pageUrl) {
     pageUrl,
     '-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
     '-o', '-',
-    '--no-warnings',
     '--no-playlist',
     '--no-check-certificates',
-    // Prefer clients that sometimes work on datacenter IPs without cookies
-    '--extractor-args', 'youtube:player_client=android,ios,tv,web',
+    // Modern YouTube needs a JS runtime for nsig / challenges
+    '--js-runtimes', 'deno',
+    '--extractor-args', 'youtube:player_client=web,mweb,android,ios',
   ];
 
   const cookies = getCookiesPath();
@@ -46,8 +64,14 @@ function streamWithYtdlp(pageUrl, options = {}) {
   const af = buildAf(options);
 
   return new Promise((resolve, reject) => {
-    const ytdlp = spawn(YOUTUBE_DL_PATH, buildYtdlpArgs(pageUrl), {
+    const bin = resolveYtdlpBin();
+    logger.info(`yt-dlp binary: ${bin}`);
+    const ytdlp = spawn(bin, buildYtdlpArgs(pageUrl), {
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        PATH: `/usr/local/bin:${process.env.PATH || ''}`,
+      },
     });
 
     const ffmpegArgs = [
@@ -99,7 +123,7 @@ function streamWithYtdlp(pageUrl, options = {}) {
             'YouTube blocked this cloud server. Add YOUTUBE_COOKIES (or YOUTUBE_COOKIES_BASE64) in Railway. See README.'
           );
         } else {
-          fail(`yt-dlp failed: ${detail.slice(0, 280)}`);
+          fail(`yt-dlp failed: ${detail.slice(-500)}`);
         }
       }
     });
