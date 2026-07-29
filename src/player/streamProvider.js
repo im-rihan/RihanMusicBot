@@ -40,14 +40,14 @@ function buildAf({ volume = 100, filterAf = null } = {}) {
   return parts.length ? parts.join(',') : null;
 }
 
-function ytdlpBaseArgs(pageUrl, extra = []) {
+function ytdlpBaseArgs(pageUrl, { extra = [], client = 'web,mweb,android,ios' } = {}) {
   const args = [
     pageUrl,
     '-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
     '--no-playlist',
     '--no-check-certificates',
     '--js-runtimes', 'deno',
-    '--extractor-args', 'youtube:player_client=web,mweb,android,ios',
+    '--extractor-args', `youtube:player_client=${client}`,
     '--user-agent', USER_AGENT,
     '--referer', 'https://www.youtube.com/',
     ...extra,
@@ -87,9 +87,11 @@ function runYtdlp(args, timeoutMs = 90_000) {
   });
 }
 
-async function resolveAudioUrl(pageUrl) {
-  logger.info(`Resolving audio URL via yt-dlp: ${pageUrl}`);
-  const { out, err } = await runYtdlp(ytdlpBaseArgs(pageUrl, ['-g', '--no-warnings']));
+async function resolveAudioUrl(pageUrl, client) {
+  logger.info(`Resolving audio URL via yt-dlp (${client}): ${pageUrl}`);
+  const { out, err } = await runYtdlp(
+    ytdlpBaseArgs(pageUrl, { extra: ['-g', '--no-warnings'], client })
+  );
   const url = out
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -181,14 +183,18 @@ function ffmpegFromUrl(audioUrl, options = {}) {
 /**
  * Most reliable on cloud: yt-dlp downloads (with cookies) and pipes into ffmpeg.
  */
-function ffmpegFromYtdlpPipe(pageUrl, options = {}) {
+function ffmpegFromYtdlpPipe(pageUrl, options = {}, client = 'android,ios,web') {
   const af = buildAf(options);
   const bin = resolveYtdlpBin();
 
-  const ytdlp = spawn(bin, ytdlpBaseArgs(pageUrl, ['-o', '-', '--no-warnings']), {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PATH: `/usr/local/bin:${process.env.PATH || ''}` },
-  });
+  const ytdlp = spawn(
+    bin,
+    ytdlpBaseArgs(pageUrl, { extra: ['-o', '-', '--no-warnings'], client }),
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, PATH: `/usr/local/bin:${process.env.PATH || ''}` },
+    }
+  );
 
   const ffmpegArgs = [
     '-analyzeduration', '0',
@@ -229,26 +235,34 @@ function ffmpegFromYtdlpPipe(pageUrl, options = {}) {
 }
 
 async function streamWithYtdlp(pageUrl, options = {}) {
-  // Prefer pipe (cookies applied by yt-dlp during download). URL+ffmpeg often hangs on Railway.
-  try {
-    logger.info('Trying yt-dlp → ffmpeg pipe');
-    return await ffmpegFromYtdlpPipe(pageUrl, options);
-  } catch (pipeErr) {
-    logger.warn(`Pipe stream failed: ${pipeErr.message?.slice(0, 200)}`);
+  const clients = ['android,ios', 'web,mweb', 'tv,web'];
+  const errors = [];
+
+  for (const client of clients) {
     try {
-      const audioUrl = await resolveAudioUrl(pageUrl);
-      logger.info('Falling back to direct URL + ffmpeg headers');
-      return await ffmpegFromUrl(audioUrl, options);
-    } catch (urlErr) {
-      const detail = `${pipeErr.message}\n${urlErr.message}`;
-      if (/sign in|not a bot|cookies/i.test(detail)) {
-        throw new Error(
-          'YouTube blocked this cloud server. Re-export cookies and set YOUTUBE_COOKIES_BASE64 on Railway.'
-        );
+      logger.info(`Trying yt-dlp → ffmpeg pipe (client=${client})`);
+      return await ffmpegFromYtdlpPipe(pageUrl, options, client);
+    } catch (pipeErr) {
+      logger.warn(`Pipe failed [${client}]: ${pipeErr.message?.slice(0, 220)}`);
+      errors.push(pipeErr.message);
+      try {
+        const audioUrl = await resolveAudioUrl(pageUrl, client);
+        logger.info(`Falling back to direct URL + ffmpeg headers [${client}]`);
+        return await ffmpegFromUrl(audioUrl, options);
+      } catch (urlErr) {
+        logger.warn(`URL fallback failed [${client}]: ${urlErr.message?.slice(0, 220)}`);
+        errors.push(urlErr.message);
       }
-      throw new Error(`yt-dlp failed: ${detail.slice(-600)}`);
     }
   }
+
+  const detail = errors.join('\n---\n');
+  if (/sign in to confirm|not a bot/i.test(detail)) {
+    throw new Error(
+      'YouTube blocked this Railway IP. Export fresh cookies and set YOUTUBE_COOKIES_BASE64 (see README).'
+    );
+  }
+  throw new Error(`yt-dlp failed after retries:\n${detail.slice(-700)}`);
 }
 
 async function createTrackStream(track, options = {}) {
