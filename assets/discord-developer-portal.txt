@@ -1,0 +1,92 @@
+========================================================
+RIHAN MUSIC BOT — Discord Developer Portal copy/paste
+========================================================
+Open: https://discord.com/developers/applications
+Select your application, then paste the sections below.
+
+
+--------------------------------------------------------
+1) GENERAL INFORMATION → DESCRIPTION (About Me)
+   Limit: 400 characters
+--------------------------------------------------------
+Rihan Music — your private Discord music bot.
+
+Play YouTube, Spotify links & SoundCloud.
+Queue • Loop • Shuffle • Filters • 24/7 • DJ roles
+
+Try /play  ·  /help for all commands
+github.com/im-rihan/RihanMusicBot
+
+
+--------------------------------------------------------
+2) GENERAL INFORMATION → TAGS (optional, max 5)
+--------------------------------------------------------
+music
+youtube
+entertainment
+audio
+fun
+
+
+--------------------------------------------------------
+3) SHORT SUMMARY / TAGLINE (optional notes)
+--------------------------------------------------------
+Private Discord music bot — YouTube, Spotify & SoundCloud
+
+
+--------------------------------------------------------
+4) BOT PRESENCE (set by code, for reference)
+--------------------------------------------------------
+Status: Online
+Activity: Listening to /play • Rihan Music
+
+
+--------------------------------------------------------
+5) IMAGE UPLOADS
+--------------------------------------------------------
+App / Bot Icon:
+  D:\Work\Personal\RihanMusicBot\assets\bot-icon.png
+
+Bot Banner (680x240):
+  D:\Work\Personal\RihanMusicBot\assets\bot-banner.png
+
+Cover Image (optional, widescreen):
+  same banner or assets/bot-banner.png
+
+
+--------------------------------------------------------
+6) OAUTH2 → URL GENERATOR (invite)
+--------------------------------------------------------
+Scopes:
+  bot
+  applications.commands
+
+Bot Permissions:
+  View Channels
+  Send Messages
+  Embed Links
+  Read Message History
+  Connect
+  Speak
+  Use Voice Activity
+
+
+--------------------------------------------------------
+7) LINKS
+--------------------------------------------------------
+GitHub: https://github.com/im-rihan/RihanMusicBot
+Invite example:
+https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=3147776&scope=bot%20applications.commands
+
+
+--------------------------------------------------------
+8) WHERE TO PASTE IN PORTAL
+--------------------------------------------------------
+1. General Information → Description  → paste section 1
+2. General Information → Tags         → add section 2
+3. Bot → Icon                         → upload bot-icon.png
+4. Bot / General → Banner/Cover       → upload bot-banner.png
+5. Save Changes
+
+After Railway redeploy, the bot also sets Description + Tags from src/branding.js automatically.
+========================================================
