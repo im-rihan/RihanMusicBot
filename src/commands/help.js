@@ -1,5 +1,6 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { infoEmbed } = require('../utils/embeds');
+const branding = require('../branding');
 
 module.exports = {
   data: new SlashCommandBuilder().setName('help').setDescription('Show all bot commands'),
@@ -7,6 +8,8 @@ module.exports = {
     const embed = infoEmbed(
       'Rihan Music — Help',
       [
+        branding.tagline,
+        '',
         '**Music**',
         '`/play` `/pause` `/resume` `/skip` `/stop`',
         '`/queue` `/nowplaying` `/loop` `/shuffle` `/volume`',
@@ -17,11 +20,13 @@ module.exports = {
         '`/247` `/dj` `/lock` `/unlock` `/setup` `/restart`',
         '',
         'Supports **YouTube**, **Spotify** links, and **SoundCloud**.',
-        'Use the Now Playing buttons: Prev / Pause / Resume / Next / Stop,',
-        'Loop / Shuffle / Vol± / Queue / Autoplay / Replay / Clear / Lyrics / Leave.',
-      ].join('\n')
+        'Use the Now Playing buttons for quick controls.',
+        '',
+        `[GitHub](${branding.github})`,
+      ].join('\n'),
+      interaction.client
     );
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };

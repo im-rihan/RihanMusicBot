@@ -13,4 +13,5 @@ module.exports = {
   leaveOnEnd: true,
   leaveOnEndCooldown: 60_000,
   progressBarLength: 15,
+  branding: require('./branding'),
 };

@@ -82,7 +82,20 @@ npm start
 | `/setup` `/restart` | Config & owner restart |
 | `/help` | Command list |
 
-## Hosting (keep the bot online without your PC)
+## Bot profile / bio
+
+On startup the bot updates its **application description** (About Me) and presence.
+
+Edit text in `src/branding.js`, then redeploy.
+
+You can also set these manually in the [Developer Portal](https://discord.com/developers/applications):
+
+1. **General Information** → Description (same as About Me)
+2. **General Information** → Tags (optional)
+3. **Bot** → Icon (`assets/bot-icon.png`) and Banner (`assets/bot-banner.png` 680×240)
+4. Save Changes
+
+Presence shows as: **Listening to** `/play • Rihan Music`
 
 **Do not use GitHub Actions** for this bot. Actions runners stop after each job, so the bot would go offline within minutes. Discord music bots need a process that stays running 24/7.
 
