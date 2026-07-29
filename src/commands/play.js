@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { checkVoiceRequirements } = require('../utils/permissions');
 const { errorEmbed, successEmbed, trackEmbed, playerButtons, formatDuration } = require('../utils/embeds');
+const { safeDefer, safeEditReply } = require('../utils/interactions');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -10,12 +11,17 @@ module.exports = {
       opt.setName('query').setDescription('Song name or URL').setRequired(true)
     ),
   async execute(interaction) {
-    await interaction.deferReply();
-
+    const deferred = await safeDefer(interaction);
     const client = interaction.client;
+
     const check = checkVoiceRequirements(interaction, { needSameChannel: false });
     if (!check.ok) {
-      return interaction.editReply({ embeds: [errorEmbed(check.message, client)] });
+      return safeEditReply(interaction, { embeds: [errorEmbed(check.message, client)] });
+    }
+
+    // If another bot instance already handled this interaction, stop quietly
+    if (!deferred && !interaction.deferred && !interaction.replied) {
+      return;
     }
 
     const query = interaction.options.getString('query', true);
@@ -28,11 +34,11 @@ module.exports = {
           title: result.added > 1 ? `Now Playing (+${result.added - 1} more)` : 'Now Playing',
           client,
         });
-        return interaction.editReply({ embeds: [embed], components: playerButtons() });
+        return safeEditReply(interaction, { embeds: [embed], components: playerButtons() });
       }
 
       if (result.added > 1) {
-        return interaction.editReply({
+        return safeEditReply(interaction, {
           embeds: [
             successEmbed(
               `Added **${result.added}** tracks to the queue.\nFirst: [${result.track.title}](${result.track.url})`,
@@ -42,7 +48,7 @@ module.exports = {
         });
       }
 
-      return interaction.editReply({
+      return safeEditReply(interaction, {
         embeds: [
           successEmbed(
             `Queued [${result.track.title}](${result.track.url}) — \`${formatDuration(result.track.duration)}\` at position **#${result.position}**`,
@@ -51,7 +57,7 @@ module.exports = {
         ],
       });
     } catch (err) {
-      return interaction.editReply({ embeds: [errorEmbed(err.message || 'Failed to play.', client)] });
+      return safeEditReply(interaction, { embeds: [errorEmbed(err.message || 'Failed to play.', client)] });
     }
   },
 };
