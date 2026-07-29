@@ -98,6 +98,20 @@ npm start
 4. Deploy — Railway builds the Dockerfile and keeps the bot online
 5. **Stop the bot on your PC** so only one instance runs
 
+### YouTube cookies (required on Railway / cloud)
+
+Cloud IPs are often blocked by YouTube (`Sign in to confirm you're not a bot`). Fix:
+
+1. On your PC, install a cookies export extension such as **“Get cookies.txt LOCALLY”**
+2. Open [youtube.com](https://www.youtube.com) while logged in
+3. Export cookies → save as `cookies.txt` (Netscape format)
+4. In Railway → your service → **Variables**, add either:
+   - `YOUTUBE_COOKIES` = paste the **full file contents**, or
+   - `YOUTUBE_COOKIES_BASE64` = base64 of that file (safer for special characters)
+5. Redeploy
+
+Cookies expire periodically — re-export if playback stops working.
+
 ### Other options
 
 | Host | Notes |

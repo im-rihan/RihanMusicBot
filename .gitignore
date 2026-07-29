@@ -1,6 +1,7 @@
 node_modules/
 .env
 data/bot.json
+data/youtube-cookies.txt
 data/*.db
 data/*.db-*
 *-player-script.js
