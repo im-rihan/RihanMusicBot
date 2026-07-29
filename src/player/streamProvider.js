@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
+const { Readable } = require('stream');
 const { StreamType } = require('@discordjs/voice');
 const ffmpegPath = require('ffmpeg-static');
 const play = require('play-dl');
@@ -8,6 +9,9 @@ const { getCookiesPath } = require('../utils/cookies');
 const { YOUTUBE_DL_PATH } = require('youtube-dl-exec/src/constants');
 
 const logger = createLogger('stream');
+
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 function resolveYtdlpBin() {
   const candidates = [
@@ -44,6 +48,8 @@ function ytdlpBaseArgs(pageUrl, extra = []) {
     '--no-check-certificates',
     '--js-runtimes', 'deno',
     '--extractor-args', 'youtube:player_client=web,mweb,android,ios',
+    '--user-agent', USER_AGENT,
+    '--referer', 'https://www.youtube.com/',
     ...extra,
   ];
 
@@ -52,7 +58,7 @@ function ytdlpBaseArgs(pageUrl, extra = []) {
   return args;
 }
 
-function runYtdlp(args, timeoutMs = 60_000) {
+function runYtdlp(args, timeoutMs = 90_000) {
   return new Promise((resolve, reject) => {
     const bin = resolveYtdlpBin();
     const child = spawn(bin, args, {
@@ -96,31 +102,15 @@ async function resolveAudioUrl(pageUrl) {
   return url;
 }
 
-function ffmpegFromUrl(audioUrl, options = {}) {
-  const af = buildAf(options);
-  const args = [
-    '-reconnect', '1',
-    '-reconnect_streamed', '1',
-    '-reconnect_delay_max', '5',
-    '-analyzeduration', '0',
-    '-loglevel', 'error',
-    '-i', audioUrl,
-  ];
-  if (af) args.push('-af', af);
-  args.push('-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
-
-  const ffmpeg = spawn(ffmpegPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-  let fErr = '';
-  ffmpeg.stderr.on('data', (c) => {
-    fErr += c.toString();
-    if (fErr.length > 1500) fErr = fErr.slice(-1500);
-  });
-
+function wrapFfmpegStdout(ffmpeg, cleanup) {
   return new Promise((resolve, reject) => {
     let settled = false;
-    const cleanup = () => {
-      try { ffmpeg.kill('SIGKILL'); } catch { /* ignore */ }
-    };
+    let fErr = '';
+
+    ffmpeg.stderr.on('data', (c) => {
+      fErr += c.toString();
+      if (fErr.length > 2000) fErr = fErr.slice(-2000);
+    });
 
     const fail = (msg) => {
       if (settled) return;
@@ -131,7 +121,7 @@ function ffmpegFromUrl(audioUrl, options = {}) {
 
     ffmpeg.on('exit', (code) => {
       if (code && code !== 0 && !settled) {
-        fail(`ffmpeg failed: ${(fErr || 'no output').trim().slice(0, 240)}`);
+        fail(`ffmpeg failed: ${(fErr || 'no output').trim().slice(0, 300)}`);
       }
     });
 
@@ -140,7 +130,6 @@ function ffmpegFromUrl(audioUrl, options = {}) {
       settled = true;
       logger.info('Audio stream started');
 
-      const { Readable } = require('stream');
       const stream = new Readable({ read() {} });
       stream.push(chunk);
       ffmpeg.stdout.on('data', (c) => stream.push(c));
@@ -157,23 +146,108 @@ function ffmpegFromUrl(audioUrl, options = {}) {
     ffmpeg.stdout.once('error', (err) => fail(err.message || 'Audio stream error'));
 
     setTimeout(() => {
-      if (!settled) fail('Timed out waiting for ffmpeg audio.');
-    }, 30_000);
+      if (!settled) {
+        fail(`Timed out waiting for ffmpeg audio.${fErr ? ` ${fErr.trim().slice(-200)}` : ''}`);
+      }
+    }, 45_000);
+  });
+}
+
+function ffmpegFromUrl(audioUrl, options = {}) {
+  const af = buildAf(options);
+  // YouTube CDN URLs require browser-like headers or they hang/403
+  const args = [
+    '-reconnect', '1',
+    '-reconnect_streamed', '1',
+    '-reconnect_delay_max', '5',
+    '-user_agent', USER_AGENT,
+    '-referer', 'https://www.youtube.com/',
+    '-headers', 'Accept-Language: en-US,en;q=0.9\r\nOrigin: https://www.youtube.com\r\n',
+    '-analyzeduration', '0',
+    '-loglevel', 'error',
+    '-i', audioUrl,
+  ];
+  if (af) args.push('-af', af);
+  args.push('-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
+
+  const ffmpeg = spawn(ffmpegPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const cleanup = () => {
+    try { ffmpeg.kill('SIGKILL'); } catch { /* ignore */ }
+  };
+
+  return wrapFfmpegStdout(ffmpeg, cleanup);
+}
+
+/**
+ * Most reliable on cloud: yt-dlp downloads (with cookies) and pipes into ffmpeg.
+ */
+function ffmpegFromYtdlpPipe(pageUrl, options = {}) {
+  const af = buildAf(options);
+  const bin = resolveYtdlpBin();
+
+  const ytdlp = spawn(bin, ytdlpBaseArgs(pageUrl, ['-o', '-', '--no-warnings']), {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, PATH: `/usr/local/bin:${process.env.PATH || ''}` },
+  });
+
+  const ffmpegArgs = [
+    '-analyzeduration', '0',
+    '-loglevel', 'error',
+    '-i', 'pipe:0',
+  ];
+  if (af) ffmpegArgs.push('-af', af);
+  ffmpegArgs.push('-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
+
+  const ffmpeg = spawn(ffmpegPath, ffmpegArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+  ytdlp.stdout.pipe(ffmpeg.stdin);
+  ytdlp.stdout.on('error', () => {});
+  ffmpeg.stdin.on('error', () => {});
+
+  let yErr = '';
+  ytdlp.stderr.on('data', (c) => {
+    yErr += c.toString();
+    if (yErr.length > 2500) yErr = yErr.slice(-2500);
+  });
+
+  ytdlp.on('exit', (code) => {
+    if (code && code !== 0) {
+      logger.warn(`yt-dlp pipe exit ${code}: ${yErr.trim().slice(0, 300)}`);
+    }
+  });
+
+  const cleanup = () => {
+    try { ytdlp.kill('SIGKILL'); } catch { /* ignore */ }
+    try { ffmpeg.kill('SIGKILL'); } catch { /* ignore */ }
+  };
+
+  return wrapFfmpegStdout(ffmpeg, cleanup).catch((err) => {
+    cleanup();
+    const extra = yErr.trim() ? ` | yt-dlp: ${yErr.trim().slice(-300)}` : '';
+    throw new Error(`${err.message}${extra}`);
   });
 }
 
 async function streamWithYtdlp(pageUrl, options = {}) {
+  // Prefer pipe (cookies applied by yt-dlp during download). URL+ffmpeg often hangs on Railway.
   try {
-    const audioUrl = await resolveAudioUrl(pageUrl);
-    return ffmpegFromUrl(audioUrl, options);
-  } catch (err) {
-    const detail = err.message || String(err);
-    if (/sign in|not a bot|cookies/i.test(detail)) {
-      throw new Error(
-        'YouTube blocked this cloud server. Re-export cookies and set YOUTUBE_COOKIES_BASE64 on Railway.'
-      );
+    logger.info('Trying yt-dlp → ffmpeg pipe');
+    return await ffmpegFromYtdlpPipe(pageUrl, options);
+  } catch (pipeErr) {
+    logger.warn(`Pipe stream failed: ${pipeErr.message?.slice(0, 200)}`);
+    try {
+      const audioUrl = await resolveAudioUrl(pageUrl);
+      logger.info('Falling back to direct URL + ffmpeg headers');
+      return await ffmpegFromUrl(audioUrl, options);
+    } catch (urlErr) {
+      const detail = `${pipeErr.message}\n${urlErr.message}`;
+      if (/sign in|not a bot|cookies/i.test(detail)) {
+        throw new Error(
+          'YouTube blocked this cloud server. Re-export cookies and set YOUTUBE_COOKIES_BASE64 on Railway.'
+        );
+      }
+      throw new Error(`yt-dlp failed: ${detail.slice(-600)}`);
     }
-    throw new Error(`yt-dlp failed: ${detail.slice(-500)}`);
   }
 }
 
