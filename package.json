@@ -1,0 +1,31 @@
+{
+  "name": "rihan-music-bot",
+  "version": "1.0.0",
+  "description": "Production-ready Discord music bot with YouTube, Spotify, and SoundCloud support",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "keywords": [
+    "discord",
+    "music",
+    "bot",
+    "discord.js"
+  ],
+  "author": "Rihan",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.18.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7",
+    "ffmpeg-static": "^5.2.0",
+    "libsodium-wrappers": "^0.7.15",
+    "opusscript": "^0.0.8",
+    "play-dl": "^1.9.7"
+  }
+}

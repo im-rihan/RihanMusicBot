@@ -1,0 +1,11 @@
+services:
+  music-bot:
+    build: .
+    container_name: rihan-music-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production

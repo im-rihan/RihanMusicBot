@@ -1,0 +1,18 @@
+const { ActivityType, Events } = require('discord.js');
+const { createLogger } = require('../utils/logger');
+
+const logger = createLogger('ready');
+
+module.exports = {
+  name: Events.ClientReady,
+  once: true,
+  execute(client) {
+    logger.info(`Logged in as ${client.user.tag}`);
+    logger.info(`Serving ${client.guilds.cache.size} guild(s)`);
+
+    client.user.setPresence({
+      activities: [{ name: '/play | Rihan Music', type: ActivityType.Listening }],
+      status: 'online',
+    });
+  },
+};
